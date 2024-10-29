@@ -50,15 +50,15 @@ class OpticalSurfaceBase(OpticalElement):
         __n_2 (float): The refractive index of the medium inside the surface.
     """
 
-    def __init__(self, pos, norm, aperture, curvature, n_1, n_2):
+    def __init__(self, pos, normal, aperture, curvature, n_1, n_2):
         if len(pos) != 3:
             raise ValueError('Wrong size of position')
-        if len(norm) != 3:
+        if len(normal) != 3:
             raise ValueError('Wrong size of direction')
 
-        norm = norm(np.array(norm))
+        normal = norm(np.array(normal))
         self.__pos = np.array(pos)
-        self.__norm = norm
+        self.__norm = normal
         self.__aperture = aperture
         self.__curvature = curvature
         self.__n_1 = n_1
@@ -71,7 +71,7 @@ class OpticalSurfaceBase(OpticalElement):
         """
         return self.__pos
 
-    def norm(self):
+    def normal(self):
         """
         Returns:
             numpy.ndarray: A 3-elements array representing the direction vector of the surface.
@@ -106,16 +106,6 @@ class OpticalSurfaceBase(OpticalElement):
         """
         return self.__n_2
     
-
-class PlanarReflection(OpticalElement):
-    """
-    A class for planar reflection, a special case of spherical refraction with zero curvature.
-    """
-
-    def __init__(self, pos, norm, aperture, n_1, n_2):
-        super().__init__(pos=pos, norm=norm, aperture=aperture, curvature=0, n_1=n_1, n_2=n_2)
-    
-
     def intercept(self, ray):
         """
         Calculate the intercept point between the ray and the planar surface.
@@ -130,7 +120,7 @@ class PlanarReflection(OpticalElement):
         direc_r = ray.direc()
 
         pos_p = self.pos()
-        norm_p = self.norm()
+        norm_p = self.normal()
 
         # Ray Equation: R(t) = P_r + t * D_r
         # Plane Equation: (R(t) - P_p) * N_p = 0
@@ -154,6 +144,15 @@ class PlanarReflection(OpticalElement):
         
         return intercept
     
+
+class PlanarReflection(OpticalSurfaceBase):
+    """
+    A class for planar reflection, a special case of spherical refraction with zero curvature.
+    """
+
+    def __init__(self, pos, normal, aperture, n_1, n_2):
+        super().__init__(pos=pos, normal=normal, aperture=aperture, curvature=0, n_1=n_1, n_2=n_2)
+    
     def focal_point(self):
         return None
     
@@ -172,9 +171,29 @@ class PlanarReflection(OpticalElement):
         if intercept is None:
             raise ValueError("No valid intercept found for the ray.")
 
-        reflec = reflect(ray.direc(), self.norm(intercept))
+        reflec = reflect(ray.direc(), self.normal())
         if reflec is None:
             raise ValueError(" No valid rlected ray")
 
         ray.append(intercept, reflec)
 
+class OutputPlane(OpticalSurfaceBase):
+    """
+    the class representing the output plane in an optical system.
+
+    The output plane records the intercept point of a ray without changing its direction.
+    """
+
+    def __init__(self, pos, normal):
+        super().__init__(pos=pos, normal=normal, aperture=float('inf'), curvature=0, n_1=None, n_2=None)
+
+    def propagate_ray(self, ray):
+        """
+        Propagate the ray to the output plane.
+
+        Args:
+            ray (Ray): the ray object, consisting of its position and direction.
+        """
+        intercept = self.intercept(ray)
+        if intercept is not None:  # Ensure intercept is valid before appending
+            ray.append(intercept, ray.direc())
