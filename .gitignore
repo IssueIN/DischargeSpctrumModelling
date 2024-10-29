@@ -166,3 +166,6 @@ data/
 
 # output result
 output/
+
+# test file
+Spectrometer/test.py
