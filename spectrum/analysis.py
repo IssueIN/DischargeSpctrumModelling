@@ -16,24 +16,24 @@ def sum_up_col(grid):
     
     return sum_cols
 
-def plot_spectrual_line(img_path, output_path):
+def get_spectrual_line(img_path):
     img_grid = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
     sum = sum_up_col(img_grid)
     x_vals = np.arange(len(sum))
 
-    fig = plt.figure()
-    plt.scatter(x_vals, sum, s=2)
-    plt.xlabel('position (a. u.)')
-    plt.ylabel('pixel value (a.u.)')
-    plt.grid()
-    # fig.savefig(output_path)
+    # fig = plt.figure()
+    # plt.scatter(x_vals, sum, s=2)
+    # plt.xlabel('position (a. u.)')
+    # plt.ylabel('pixel value (a.u.)')
+    # plt.grid()
+    # # fig.savefig(output_path)
 
     return sum, x_vals
 
 def linear_func(x, k, b):
     return k * x + b
 
-sum, x = plot_spectrual_line(img_path, output_path)
+sum, x = get_spectrual_line(img_path)
 
 sum = np.flip(sum)
 
