@@ -168,4 +168,4 @@ data/
 output/
 
 # test file
-Spectrometer/test.py
+spectrometer/test.py
