@@ -42,10 +42,10 @@ class OpticalSurfaceBase(OpticalElement):
     Base class for optical surfaces with common functionalities.
 
     Attributes:
-        pos (list or numpy.ndarray): A list or array represnting the position of the surface.
-        norm (list or numpy.ndarray): A list or array represnting the normal direction vector of the sruface.
-        __aper (float): The radius fo the aperture of the spherical surface.
-        __curv (float): The curvature of the spherical surface.
+        __pos (list or numpy.ndarray): A list or array represnting the position of the surface.
+        __norm (list or numpy.ndarray): A list or array represnting the normal direction vector of the sruface.
+        __aperture (float): The radius fo the aperture of the spherical surface.
+        __curvature (float): The curvature of the spherical surface.
         __n_1 (float): The refractive index of the medium outside the surface.
         __n_2 (float): The refractive index of the medium inside the surface.
     """
@@ -95,15 +95,69 @@ class OpticalSurfaceBase(OpticalElement):
         """
         return self.__n_2
 
+class SphericalSurfaceBase(OpticalSurfaceBase):
+    """
+    Base class for optical spherical surfaces with common functionalities.
+
+    Attributes:
+        __pos (list or numpy.ndarray): A list or array represnting the position of the surface.
+        __aperture (float): The radius fo the aperture of the spherical surface.
+        __curvature (float): The curvature of the spherical surface.
+        __n_1 (float): The refractive index of the medium outside the surface.
+        __n_2 (float): The refractive index of the medium inside the surface.
+    """
+    def __init__(self, pos, aperture, curvature, n_1, n_2):
+        super.__init__(pos=pos, aperture=aperture, curvature=curvature, n_1=n_1, n_2=n_2)
+    
+    def intercept(self, ray):        
+        """
+        Calculate the intercept point between the ray and the spherical surface.
+
+        Args:
+            ray (Ray): The ray that propagates towards the optical element.
+
+        Returns:
+            numpy.ndarray or None: The 3D intercept point on the surface, or None if there is no intersection.
+        """
+        pos_r = ray.pos()
+        direc_r = ray.direc()
+
+        pos_s = self.pos()
+        radius = 1 / self.curvature()
+        pos_s_mag = np.linalg.norm(pos_s) ** 2
+        pos_s_direc = norm(pos_s)
+        origin = np.array(pos_s_direc * (pos_s_mag + radius))
+        r = pos_r - origin
+        r_dot_k = np.inner(r, direc_r)
+        r_sq = np.linalg.norm(r) ** 2
+        det = r_dot_k ** 2 - (r_sq - radius ** 2)
+
+        if det < 0:
+            return None
+
+        l_p = -r_dot_k + np.sqrt(det)
+        l_m = -r_dot_k - np.sqrt(det)
+
+        l = min(filter(lambda x: x > 0, [l_p, l_m]), default=None)
+        if l is None:
+            return None
+        intercept = pos_r + l * direc_r
+
+        if intercept is None or (
+                intercept[0] ** 2 + intercept[1] ** 2) > (self.aperture() ** 2):
+            return None
+
+        return intercept
+
 class PlanarSurfaceBase(OpticalSurfaceBase):
     """
     Base class for optical planar surfaces with common functionalities.
 
     Attributes:
-        pos (list or numpy.ndarray): A list or array represnting the position of the surface.
-        norm (list or numpy.ndarray): A list or array represnting the normal direction vector of the sruface.
-        __aper (float): The radius fo the aperture of the spherical surface.
-        __curv (float): The curvature of the spherical surface.
+        __pos (list or numpy.ndarray): A list or array represnting the position of the surface.
+        __norm (list or numpy.ndarray): A list or array represnting the normal direction vector of the sruface.
+        __aperture (float): The radius fo the aperture of the spherical surface.
+        __curvature (float): The curvature of the spherical surface.
         __n_1 (float): The refractive index of the medium outside the surface.
         __n_2 (float): The refractive index of the medium inside the surface.
     """
