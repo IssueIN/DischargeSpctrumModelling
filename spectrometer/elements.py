@@ -50,15 +50,11 @@ class OpticalSurfaceBase(OpticalElement):
         __n_2 (float): The refractive index of the medium inside the surface.
     """
 
-    def __init__(self, pos, normal, aperture, curvature, n_1, n_2):
+    def __init__(self, pos, aperture, curvature, n_1, n_2):
         if len(pos) != 3:
             raise ValueError('Wrong size of position')
-        if len(normal) != 3:
-            raise ValueError('Wrong size of direction')
 
-        normal = norm(np.array(normal))
         self.__pos = np.array(pos)
-        self.__norm = normal
         self.__aperture = aperture
         self.__curvature = curvature
         self.__n_1 = n_1
@@ -70,13 +66,6 @@ class OpticalSurfaceBase(OpticalElement):
             numpy.ndarray: A 3-elements array representing the x, y, z position of the surface.
         """
         return self.__pos
-
-    def normal(self):
-        """
-        Returns:
-            numpy.ndarray: A 3-elements array representing the direction vector of the surface.
-        """
-        return self.__norm
 
     def aperture(self):
         """
@@ -105,6 +94,33 @@ class OpticalSurfaceBase(OpticalElement):
             float: The refractive index inside the surface.
         """
         return self.__n_2
+
+class PlanarSurfaceBase(OpticalSurfaceBase):
+    """
+    Base class for optical planar surfaces with common functionalities.
+
+    Attributes:
+        pos (list or numpy.ndarray): A list or array represnting the position of the surface.
+        norm (list or numpy.ndarray): A list or array represnting the normal direction vector of the sruface.
+        __aper (float): The radius fo the aperture of the spherical surface.
+        __curv (float): The curvature of the spherical surface.
+        __n_1 (float): The refractive index of the medium outside the surface.
+        __n_2 (float): The refractive index of the medium inside the surface.
+    """
+    def __init__(self, pos, normal, aperture, n_1, n_2):
+        super.__init__(pos=pos, aperture=aperture, curvature=0, n_1=n_1, n_2=n_2)
+        if len(normal) != 3:
+            raise ValueError('Wrong size of normal direction')
+
+        normal = norm(np.array(normal))
+        self.__norm = normal
+    
+    def normal(self):
+        """
+        Returns:
+            numpy.ndarray: A 3-elements array representing the direction vector of the surface.
+        """
+        return self.__norm
     
     def intercept(self, ray):
         """
@@ -143,14 +159,14 @@ class OpticalSurfaceBase(OpticalElement):
             return None
         
         return intercept
-    
 
-class PlanarReflection(OpticalSurfaceBase):
+
+class PlanarReflection(PlanarSurfaceBase):
     """
     A class for planar reflection, a special case of spherical refraction with zero curvature.
     """
 
-    def __init__(self, pos, normal, aperture, n_1, n_2):
+    def __init__(self, pos, normal, aperture, n_1=1.0, n_2=1.5):
         super().__init__(pos=pos, normal=normal, aperture=aperture, curvature=0, n_1=n_1, n_2=n_2)
     
     def focal_point(self):
@@ -177,7 +193,7 @@ class PlanarReflection(OpticalSurfaceBase):
 
         ray.append(intercept, reflec)
     
-class PlanarDiffractionGrating(PlanarReflection):
+class PlanarDiffractionGrating(PlanarSurfaceBase):
     """
     A class representing a planar diffraction grating, inheriting from PlanarReflection.
 
@@ -189,7 +205,7 @@ class PlanarDiffractionGrating(PlanarReflection):
         n_2 (float): Refractive index inside the surface.
         rho_groove (float): Groove density of the diffraction grating (grooves per mm).
     """
-    def __init__(self, pos, normal, aperture, n_1, n_2, rho_groove):
+    def __init__(self, pos, normal, aperture, rho_groove, n_1=1.0, n_2=1.5):
         super().__init__(pos=pos, normal=normal, aperture=aperture, n_1=n_1, n_2=n_2)
         self.__rho_groove = rho_groove
     
