@@ -190,7 +190,7 @@ class PlanarDiffractionGrating(PlanarReflection):
         rho_groove (float): Groove density of the diffraction grating (grooves per mm).
     """
     def __init__(self, pos, normal, aperture, n_1, n_2, rho_groove):
-        super().__init__(pos=pos, normal=normal, aperture=aperture, curvature=0, n_1=n_1, n_2=n_2)
+        super().__init__(pos=pos, normal=normal, aperture=aperture, n_1=n_1, n_2=n_2)
         self.__rho_groove = rho_groove
     
     def grating_spacing(self):
