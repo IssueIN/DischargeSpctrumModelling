@@ -67,6 +67,43 @@ def reflect(direc, normal):
     reflec = norm(reflec)
     return reflec
 
+def grating_equation(direc, normal, m, d, wl):
+    """
+    Calculate the diffraction direction for a given wavelength, order, and incident direction.
+
+    Args:
+        direc (list or numpy.ndarray): A 3-element list or array representing direction vector of the incident ray.
+        normal (list or numpy.ndarray): A 3 element list or array representing normal vector of surface at the point
+            of incidence.
+        m (integer): The interested diffraction order.
+        d (float): The grating spacing of the diffraction grating.
+        wl (float): The wavelength of the light in meters.
+    
+    Returns:
+        np.ndarray: 3D vector representing the diffraction direction      
+    """
+    cos_theta_i = np.dot(direc, normal)
+    if cos_theta_i < 0:
+        normal = - normal
+    cos_theta_i = abs(cos_theta_i)
+    theta_i = np.arccos(cos_theta_i)
+
+    if wl is None:
+        raise ValueError("Diffraction angle cannot be calculated without wavelength")
+
+    # grating equation sin_theta_d = m * wl / d - sin_theta_i
+    rhs = m * wl / d - np.sin(theta_i)
+    if np.abs(rhs) > 1:
+        raise ValueError("No valid diffraction angle exists for these parameters")
+    
+    theta_d = np.arcsin(rhs)
+
+    in_plane = direc - cos_theta_i * normal
+    in_plane = norm(in_plane)
+
+    diffrac = np.cos(theta_d) * normal + np.sin(theta_d) * in_plane
+    return diffrac
+
 
 def reflectivity(direc, normal, n_1, n_2):
     """

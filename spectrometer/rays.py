@@ -12,11 +12,12 @@ class Ray:
     A class representing optical rays, encapsulating their direction, position, and vertices.
     """
 
-    def __init__(self, pos=[0., 0., 0.], direc=[0., 0., 1.]):
+    def __init__(self, pos=[0., 0., 0.], direc=[0., 0., 1.], wavelength = None):
         """
         Args:
             pos (list or numpy.ndarray): A list or array represnting the position of the ray, default as [0., 0., 0.]
             direc (list or numpy.ndarray): A list or array represnting the direction vector of the array, default as [0., 0., 1.]
+            wavelength (float): A float number representing the wavelength of the ray.
 
         Raises:
             ValueError: If `pos` does not contain exactly three elements.
@@ -28,10 +29,12 @@ class Ray:
             raise ValueError('Wrong size of direction')
 
         direc = norm(np.array(direc))
+        wavelength = float(wavelength)
 
         self.__pos = np.array(pos)
         self.__direc = direc
         self.__vert = [self.__pos]
+        self.__wl = wavelength
 
     def pos(self):
         """
@@ -53,6 +56,20 @@ class Ray:
             list: A list consisting of the vertices that the ray passed through.
         """
         return self.__vert
+    
+    def wavelength(self):
+        """
+        Returns:
+            float: A float number representing the wavelength of the ray.
+        """
+        return self.__wl
+    
+    def set_wavelength(self, wl):
+        """
+        Set the wavelength for the ray object.
+        """
+        self.__wl = float(wl)
+
 
     def append(self, pos, direc):
         """
