@@ -245,5 +245,5 @@ class OutputPlane(OpticalSurfaceBase):
             ray (Ray): the ray object, consisting of its position and direction.
         """
         intercept = self.intercept(ray)
-        if intercept is not None:  # Ensure intercept is valid before appending
+        if intercept is not None:
             ray.append(intercept, ray.direc())
