@@ -100,14 +100,30 @@ class SphericalSurfaceBase(OpticalSurfaceBase):
     Base class for optical spherical surfaces with common functionalities.
 
     Attributes:
-        __pos (list or numpy.ndarray): A list or array represnting the position of the surface.
+        __pos (list or numpy.ndarray): A list or array represnting the position of the origin.
+        __direc (list or numpy.ndarray): A list or array representing the direction of the surface.
         __aperture (float): The radius fo the aperture of the spherical surface.
         __curvature (float): The curvature of the spherical surface.
         __n_1 (float): The refractive index of the medium outside the surface.
         __n_2 (float): The refractive index of the medium inside the surface.
     """
-    def __init__(self, pos, aperture, curvature, n_1, n_2):
-        super.__init__(pos=pos, aperture=aperture, curvature=curvature, n_1=n_1, n_2=n_2)
+    def __init__(self, pos, direc, aperture, curvature, n_1, n_2):
+        super().__init__(pos=pos, aperture=aperture, curvature=curvature, n_1=n_1, n_2=n_2)
+        if len(direc) != 3:
+            raise ValueError('Wrong size of normal direction')
+
+        direc = norm(np.array(direc))
+        self.__direc = direc
+        self.radius = abs(1 / curvature)
+        self.is_concave = curvature < 0
+    
+    def direc(self):
+        """
+        Returns:
+            numpy.ndarray: A 3-elements array representing the direction vector of the surface.
+        """
+        return self.__direc
+        
     
     def intercept(self, ray):        
         """
@@ -122,11 +138,8 @@ class SphericalSurfaceBase(OpticalSurfaceBase):
         pos_r = ray.pos()
         direc_r = ray.direc()
 
-        pos_s = self.pos()
         radius = 1 / self.curvature()
-        pos_s_mag = np.linalg.norm(pos_s) ** 2
-        pos_s_direc = norm(pos_s)
-        origin = np.array(pos_s_direc * (pos_s_mag + radius))
+        origin = self.pos()
         r = pos_r - origin
         r_dot_k = np.inner(r, direc_r)
         r_sq = np.linalg.norm(r) ** 2
@@ -138,16 +151,39 @@ class SphericalSurfaceBase(OpticalSurfaceBase):
         l_p = -r_dot_k + np.sqrt(det)
         l_m = -r_dot_k - np.sqrt(det)
 
-        l = min(filter(lambda x: x > 0, [l_p, l_m]), default=None)
+        if self.is_concave:
+            l = max(filter(lambda x: x > 0, [l_p, l_m]), default=None)
+        else:
+            l = min(filter(lambda x: x > 0, [l_p, l_m]), default=None)
+            
         if l is None:
             return None
         intercept = pos_r + l * direc_r
 
-        if intercept is None or (
-                intercept[0] ** 2 + intercept[1] ** 2) > (self.aperture() ** 2):
+        to_intercept = intercept - origin
+        direc = self.direc()
+
+        to_intercept_proj = to_intercept - np.dot(to_intercept, direc) * direc
+        distance_sq = np.linalg.norm(to_intercept_proj) ** 2
+
+        if intercept is None or (distance_sq) > (self.aperture() ** 2):
             return None
 
         return intercept
+    
+    def to_intercept(self, intercept):
+        """
+        Determine the normal vector at the point of incidence on the surface.
+
+        Args:
+            intercept (numpy.ndarray): A 3-element array representing the x, y, z coordinates of the intercept.
+
+        Returns:
+            np.ndarray: A 3-element array representing the normal vector of the surface.
+        """
+        origin = self.pos()
+        normal = intercept - origin
+        return normal
 
 class PlanarSurfaceBase(OpticalSurfaceBase):
     """
@@ -162,7 +198,7 @@ class PlanarSurfaceBase(OpticalSurfaceBase):
         __n_2 (float): The refractive index of the medium inside the surface.
     """
     def __init__(self, pos, normal, aperture, n_1, n_2):
-        super.__init__(pos=pos, aperture=aperture, curvature=0, n_1=n_1, n_2=n_2)
+        super().__init__(pos=pos, aperture=aperture, curvature=0, n_1=n_1, n_2=n_2)
         if len(normal) != 3:
             raise ValueError('Wrong size of normal direction')
 
@@ -214,6 +250,36 @@ class PlanarSurfaceBase(OpticalSurfaceBase):
         
         return intercept
 
+class SphericalReflection(SphericalSurfaceBase):
+    """
+    A class for spherical reflection, modeling reflection through a spherical surface.
+    """
+
+    def __init__(self, pos, direc, aperture, curvature, n_1, n_2):
+        super().__init__(pos=pos, direc=direc, aperture=aperture, curvature=curvature, n_1=n_1, n_2=n_2)
+
+    def propagate_ray(self, ray):
+        """
+        Propagate the ray through the spherical surface, modelling reflection.
+
+        Args:
+            ray (Ray): the ray object, consisting position, direction, and vertices.
+
+        Raises:
+            ValueError: If no valid intercept is found
+            ValueError: if no valid reflection ray is found.
+        """
+        intercept = self.intercept(ray)
+        if intercept is None:
+            raise ValueError("No valid intercept found for the ray.")
+
+        reflec = reflect(ray.direc(), self.to_intercept(intercept))
+
+        if reflec is None:
+            raise ValueError(
+                "No valid reflected ray")
+
+        ray.append(intercept, reflec)
 
 class PlanarReflection(PlanarSurfaceBase):
     """
@@ -297,7 +363,7 @@ class PlanarDiffractionGrating(PlanarSurfaceBase):
         
         ray.append(intercept, diffrac)
 
-class OutputPlane(OpticalSurfaceBase):
+class OutputPlane(PlanarSurfaceBase):
     """
     the class representing the output plane in an optical system.
 
@@ -305,7 +371,7 @@ class OutputPlane(OpticalSurfaceBase):
     """
 
     def __init__(self, pos, normal):
-        super().__init__(pos=pos, normal=normal, aperture=float('inf'), curvature=0, n_1=None, n_2=None)
+        super().__init__(pos=pos, normal=normal, aperture=float('inf'), n_1=None, n_2=None)
 
     def propagate_ray(self, ray):
         """

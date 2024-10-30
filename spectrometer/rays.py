@@ -29,7 +29,8 @@ class Ray:
             raise ValueError('Wrong size of direction')
 
         direc = norm(np.array(direc))
-        wavelength = float(wavelength)
+        if wavelength is not None:
+            wavelength = float(wavelength)
 
         self.__pos = np.array(pos)
         self.__direc = direc
