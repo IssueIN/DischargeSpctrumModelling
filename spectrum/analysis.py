@@ -4,7 +4,7 @@ import cv2
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
-img_path = 'data/1028/Mercurylonger_00001.JPG'
+img_path = 'data/yellow_doublet_00005.JPG'
 output_path = 'output/1028_2.jpg'
 
 def sum_up_col(grid):
