@@ -281,6 +281,57 @@ class SphericalReflection(SphericalSurfaceBase):
 
         ray.append(intercept, reflec)
 
+class SphericalDiffractionGrating(SphericalSurfaceBase):
+    """
+    A class representing a spherical diffraction grating, inheriting from PlanarReflection.
+
+    Attributes:
+        pos (list or np.ndarray): Position of the grating in 3D space.
+        normal (list or np.ndarray): Normal vector of the grating surface.
+        aperture (float): Aperture radius of the grating.
+        n_1 (float): Refractive index outside the surface.
+        n_2 (float): Refractive index inside the surface.
+        rho_groove (float): Groove density of the diffraction grating (grooves per mm).
+    """
+    def __init__(self, pos, normal, aperture, curvature, rho_groove, n_1=1.0, n_2=1.5):
+        super().__init__(pos=pos, normal=normal, aperture=aperture, curvature=curvature, n_1=n_1, n_2=n_2)
+        self.__rho_groove = rho_groove
+    
+    def grating_spacing(self):
+        """
+        Returns:
+            float: Calculate and return the grating spacing based on groove density.
+        """
+        return 1.0 / (self.__rho_groove * 1000)
+    
+    def propagate_ray(self, ray, m=0):
+        """
+        Propagate the ray through the diffraction grating, modelling reflection.
+
+        Args:
+            ray (Ray): the ray object, consisting position, direction, wavelength, and vertices.
+            m (Integer): the interested diffraction order. 
+
+        Raises:
+            ValueError: If no valid intercept is found.
+            ValueError: if no valid diffraction.
+        """
+        intercept = self.intercept(ray)
+        if intercept is None:
+            raise ValueError("No valid intercept found for the ray.")
+        
+        direc_r = ray.direc()
+        normal = self.normal()
+        d = self.grating_spacing()
+        wl = ray.wavelength()
+        
+        diffrac = grating_equation(direc_r, normal, m, d, wl)
+        if diffrac is None:
+            raise ValueError(" No valid diffracted ray")
+        
+        ray.append(intercept, diffrac)
+
+
 class PlanarReflection(PlanarSurfaceBase):
     """
     A class for planar reflection, a special case of spherical refraction with zero curvature.
