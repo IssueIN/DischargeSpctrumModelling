@@ -171,7 +171,7 @@ class SphericalSurfaceBase(OpticalSurfaceBase):
 
         return intercept
     
-    def to_intercept(self, intercept):
+    def normal(self, intercept):
         """
         Determine the normal vector at the point of incidence on the surface.
 
@@ -273,7 +273,7 @@ class SphericalReflection(SphericalSurfaceBase):
         if intercept is None:
             raise ValueError("No valid intercept found for the ray.")
 
-        reflec = reflect(ray.direc(), self.to_intercept(intercept))
+        reflec = reflect(ray.direc(), self.normal(intercept))
 
         if reflec is None:
             raise ValueError(
