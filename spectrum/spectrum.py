@@ -1,8 +1,8 @@
 import numpy as np
-import cv2
+import cv2  #pip install opencv-python
 import matplotlib.pyplot as plt
 
-img_path = 'data/whole_spectrum_00005.JPG'
+img_path = 'data/whlespectrum_00005.JPG'
 
 def sum_up_col(grid):
     num_cols = grid.shape[1]
@@ -28,7 +28,7 @@ def get_spectrual_line(img_path):
     return sum, x_vals
 
 sum, x_vals = get_spectrual_line(img_path)
-plt.scatter(x_vals, sum, s=2)
+plt.plot(x_vals, sum)
 plt.xlabel('pixel number (#)')
 plt.ylabel('spectral intensity (a. u.)')
 plt.grid()

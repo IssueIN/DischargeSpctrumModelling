@@ -2,8 +2,8 @@
 
 
 import numpy as np
-from .physics import reflect, grating_equation
-from .utils import norm
+from spectrometer.physics import reflect, grating_equation
+from spectrometer.utils import norm
 
 class OpticalElement():
     """
@@ -287,7 +287,7 @@ class PlanarReflection(PlanarSurfaceBase):
     """
 
     def __init__(self, pos, normal, aperture, n_1=1.0, n_2=1.5):
-        super().__init__(pos=pos, normal=normal, aperture=aperture, curvature=0, n_1=n_1, n_2=n_2)
+        super().__init__(pos=pos, normal=normal, aperture=aperture, n_1=n_1, n_2=n_2)
     
     def focal_point(self):
         return None
@@ -336,7 +336,7 @@ class PlanarDiffractionGrating(PlanarSurfaceBase):
         """
         return 1.0 / (self.__rho_groove * 1000)
     
-    def propagate_ray(self, ray, m=1):
+    def propagate_ray(self, ray, m=0):
         """
         Propagate the ray through the diffraction grating, modelling reflection.
 

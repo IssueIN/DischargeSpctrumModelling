@@ -101,7 +101,7 @@ def grating_equation(direc, normal, m, d, wl):
     in_plane = direc - cos_theta_i * normal
     in_plane = norm(in_plane)
 
-    diffrac = - np.cos(theta_d) * normal + np.sin(theta_d) * in_plane
+    diffrac = - np.cos(theta_d) * normal - np.sin(theta_d) * in_plane
     return diffrac
 
 
