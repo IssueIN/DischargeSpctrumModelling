@@ -97,15 +97,19 @@ class RayBundle:
     A class representing a bundle of rays
     """
 
-    def __init__(self, rmax=5., nrings=5., multi=6):
+    def __init__(self, rmax=5., nrings=5., multi=6, wavelength=500):
         ray_bundle = []
         for output in self._genpolar(rmax, nrings, multi):
             x = output[0] * np.cos(output[1])
             y = output[0] * np.sin(output[1])
-            ray = Ray([x, y, 0], [0, 0, 1])
+            ray = Ray([x, y, 0], [0, 0, 1], wavelength=wavelength)
             ray_bundle.append(ray)
 
         self.__ray_bundle = ray_bundle
+        self.__wavelength = wavelength
+    
+    def wavelength(self):
+        return self.__wavelength
 
     def ray_bundle(self):
         """
@@ -137,7 +141,7 @@ class RayBundle:
                     endpoint=False):
                 yield (r, theta)
 
-    def propagate_bundle(self, elements):
+    def propagate_bundle(self, elements, m=0):
         """
         Propagate the ray bundle through optical elements.
 
@@ -147,3 +151,10 @@ class RayBundle:
         for element in elements:
             for ray in self.ray_bundle():
                 element.propagate_ray(ray)
+        
+        for element in elements:
+            for ray in self.ray_bundle():
+                if hasattr(element, 'propagate_ray') and 'm' in element.propagate_ray.__code__.co_varnames:
+                    element.propagate_ray(ray, m=m)
+                else:
+                    element.propagate_ray(ray)
