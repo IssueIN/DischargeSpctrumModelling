@@ -1,8 +1,8 @@
 import subprocess
 import os
-from utils import get_root
+from utils.utils import get_root
 
-def file_conversion(input_filename, output_filename, fileconversion_path=None, bit_depth=16, 
+def file_conversion(input_filename, output_filename, fileconversion_path=None, bit_depth=8, 
                     start_num=None, stop_num=None, digit_range=None, multi_tiff=False):
     """
     Convert a .b16 or .pcoraw file to a different format (e.g., .tif) using the PCO file conversion command-line tool.
@@ -52,9 +52,8 @@ def file_conversion(input_filename, output_filename, fileconversion_path=None, b
     
     # Define input and output file paths
     project_root = get_root()
-    data_folder_dir = os.path.join(project_root, 'data')
-    input_file = os.path.join(data_folder_dir, input_filename)
-    output_file = os.path.join(data_folder_dir, 'output', output_filename)
+    input_file = os.path.join(project_root, 'data', input_filename)
+    output_file = os.path.join(project_root, 'output', output_filename)
 
     # Construct the command for file conversion
     command = [fileconversion_path, '-i', input_file, '-o', output_file, '-b', str(bit_depth)]
