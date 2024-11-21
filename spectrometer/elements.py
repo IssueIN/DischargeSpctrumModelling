@@ -4,6 +4,7 @@
 import numpy as np
 from spectrometer.physics import reflect, grating_equation
 from spectrometer.utils import norm
+import inspect
 
 class OpticalElement():
     """
@@ -158,6 +159,7 @@ class SphericalSurfaceBase(OpticalSurfaceBase):
             
         if l is None:
             return None
+
         intercept = pos_r + l * direc_r
 
         to_intercept = intercept - origin
@@ -183,6 +185,7 @@ class SphericalSurfaceBase(OpticalSurfaceBase):
         """
         origin = self.pos()
         normal = intercept - origin
+        normal = norm(normal)
         return normal
 
 class PlanarSurfaceBase(OpticalSurfaceBase):
@@ -233,7 +236,7 @@ class PlanarSurfaceBase(OpticalSurfaceBase):
         # Solve for t, substitute t back into Ray equation
 
         denom = np.dot(direc_r, norm_p)
-        if np.abs(denom) < 1e-6:
+        if np.abs(denom) < 1e-8:
             return None
         
         t = np.dot(pos_p - pos_r, norm_p) / denom
@@ -246,6 +249,7 @@ class PlanarSurfaceBase(OpticalSurfaceBase):
         distance =  np.linalg.norm(intercept - pos_p)
 
         if intercept is None or distance > self.aperture():
+            print('aperture')
             return None
         
         return intercept
@@ -258,7 +262,6 @@ class DiffractionGratingBase(OpticalElement):
         __rho_groove (float): Groove density of the diffraction grating (grooves per mm).
     """
     def __init__(self, rho_groove):
-        super().__init__()
         self.__rho_groove = rho_groove
 
     def grating_spacing(self):
@@ -296,7 +299,10 @@ class DiffractionGratingBase(OpticalElement):
             raise ValueError("No valid intercept found for the ray.")
         
         direc_r = ray.direc()
-        normal = self.normal()
+        if 'intercept' in inspect.signature(self.normal).parameters:
+            normal = self.normal(intercept)  # Call with intercept if needed
+        else:
+            normal = self.normal()  # Call without intercept
         d = self.grating_spacing()
         wl = ray.wavelength()
 
@@ -337,7 +343,7 @@ class SphericalReflection(SphericalSurfaceBase):
 
         ray.append(intercept, reflec)
 
-class SphericalDiffractionGrating(DiffractionGratingBase, SphericalSurfaceBase):
+class SphericalDiffractionGrating(SphericalSurfaceBase):
     """
     A class representing a spherical diffraction grating, inheriting from PlanarReflection.
 
@@ -349,17 +355,47 @@ class SphericalDiffractionGrating(DiffractionGratingBase, SphericalSurfaceBase):
         n_2 (float): Refractive index inside the surface.
         rho_groove (float): Groove density of the diffraction grating (grooves per mm).
     """
-    def __init__(self, pos, normal, aperture, curvature, rho_groove, n_1=1.0, n_2=1.5):
-
-        SphericalSurfaceBase.__init__(self, pos=pos, normal=normal, aperture=aperture, curvature=curvature, n_1=n_1, n_2=n_2)
-        DiffractionGratingBase.__init__(self, rho_groove=rho_groove)
+    def __init__(self, pos, direc, aperture, curvature, rho_groove, n_1=1.0, n_2=1.5):
+        super().__init__(pos=pos, direc=direc, aperture=aperture, curvature=curvature, n_1=n_1, n_2=n_2)
+        self.__rho_groove = rho_groove
     
     def grating_spacing(self):
         """
+        Calculate and return the grating spacing based on groove density.
+
         Returns:
-            float: Calculate and return the grating spacing based on groove density.
+            float: The spacing between the grating lines.
         """
         return 1.0 / (self.__rho_groove * 1000)
+
+    
+    def propagate_ray(self, ray, m=0):
+        """
+        Propagate the ray through the diffraction grating, modelling diffraction.
+
+        Args:
+            ray (Ray): The ray object, consisting of position, direction, wavelength, and vertices.
+            m (int): The diffraction order of interest.
+
+        Raises:
+            ValueError: If no valid intercept or diffraction is found.
+        """
+        intercept = self.intercept(ray)
+        if intercept is None:
+            raise ValueError("No valid intercept found for the ray.")
+        
+        direc_r = ray.direc()
+        normal = self.normal(intercept)
+        d = self.grating_spacing()
+        wl = ray.wavelength()
+
+        diffrac = grating_equation(direc_r, normal, m, d, wl)
+        if diffrac is None:
+            raise ValueError("No valid diffracted ray found.")
+        
+        ray.append(intercept, diffrac)
+    
+
 
 class PlanarReflection(PlanarSurfaceBase):
     """
@@ -393,7 +429,7 @@ class PlanarReflection(PlanarSurfaceBase):
 
         ray.append(intercept, reflec)
     
-class PlanarDiffractionGrating(DiffractionGratingBase, PlanarSurfaceBase):
+class PlanarDiffractionGrating(PlanarSurfaceBase, DiffractionGratingBase):
     """
     A class representing a planar diffraction grating, inheriting from PlanarReflection.
 
@@ -406,8 +442,44 @@ class PlanarDiffractionGrating(DiffractionGratingBase, PlanarSurfaceBase):
         rho_groove (float): Groove density of the diffraction grating (grooves per mm).
     """
     def __init__(self, pos, normal, aperture, rho_groove, n_1=1.0, n_2=1.5):
-        PlanarSurfaceBase.__init__(self, pos=pos, normal=normal, aperture=aperture, n_1=n_1, n_2=n_2)
-        DiffractionGratingBase.__init__(rho_groove = rho_groove)
+        super().__init__(pos=pos, normal=normal, aperture=aperture, n_1=n_1, n_2=n_2)
+        self.__rho_groove = rho_groove
+    
+    def grating_spacing(self):
+        """
+        Calculate and return the grating spacing based on groove density.
+
+        Returns:
+            float: The spacing between the grating lines.
+        """
+        return 1.0 / (self.__rho_groove * 1000)
+
+    
+    def propagate_ray(self, ray, m=0):
+        """
+        Propagate the ray through the diffraction grating, modelling diffraction.
+
+        Args:
+            ray (Ray): The ray object, consisting of position, direction, wavelength, and vertices.
+            m (int): The diffraction order of interest.
+
+        Raises:
+            ValueError: If no valid intercept or diffraction is found.
+        """
+        intercept = self.intercept(ray)
+        if intercept is None:
+            raise ValueError("No valid intercept found for the ray.")
+        
+        direc_r = ray.direc()
+        normal = self.normal()
+        d = self.grating_spacing()
+        wl = ray.wavelength()
+
+        diffrac = grating_equation(direc_r, normal, m, d, wl)
+        if diffrac is None:
+            raise ValueError("No valid diffracted ray found.")
+        
+        ray.append(intercept, diffrac)
 
 
 class OutputPlane(PlanarSurfaceBase):

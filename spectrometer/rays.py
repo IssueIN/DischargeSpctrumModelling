@@ -148,9 +148,9 @@ class RayBundle:
         Args:
             elements (list): A list of optical elements to propagate the rays through.
         """
-        for element in elements:
-            for ray in self.ray_bundle():
-                element.propagate_ray(ray)
+        # for element in elements:
+        #     for ray in self.ray_bundle():
+        #         element.propagate_ray(ray)
         
         for element in elements:
             for ray in self.ray_bundle():

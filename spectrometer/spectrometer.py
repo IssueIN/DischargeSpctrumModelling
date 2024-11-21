@@ -6,8 +6,8 @@ class Spectrometer:
             raise TypeError("Mirror1 must be an instance of the PlanarReflection class.")
         if not isinstance(Mirror2, PlanarReflection):
             raise TypeError("Mirror2 must be an instance of the PlanarReflection class.")
-        if not isinstance(DiffGrat, DiffractionGratingBase):
-            raise TypeError("DiffGrat must be an instance of the DiffractionGratingBase class.")
+        # if not isinstance(DiffGrat, DiffractionGratingBase):
+        #     raise TypeError("DiffGrat must be an instance of the DiffractionGratingBase class.")
         if not isinstance(Opp, OutputPlane):
             raise TypeError('Opp Mmust be an instance of the OutputPlane')
         

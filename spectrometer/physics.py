@@ -82,10 +82,13 @@ def grating_equation(direc, normal, m, d, wl):
     Returns:
         np.ndarray: 3D vector representing the diffraction direction      
     """
+    direc = norm(direc)
+    normal = norm(normal)
     cos_theta_i = np.dot(direc, normal)
     if cos_theta_i < 0:
         normal = - normal
     cos_theta_i = abs(cos_theta_i)
+    print(cos_theta_i)
     theta_i = np.arccos(cos_theta_i)
 
     if wl is None:

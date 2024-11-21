@@ -4,8 +4,8 @@ import cv2
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 
-img_path = 'data/yellow_doublet_00005.JPG'
-output_path = 'output/1028_2.jpg'
+img_path = 'data/Canon/1_modified.JPG'
+output_path = 'output/canon1.JPG'
 
 def sum_up_col(grid):
     num_cols = grid.shape[1]
@@ -65,4 +65,4 @@ ax2.set_ylabel('Spectrual intensity (a.u.)')
 plt.tight_layout()
 plt.show()
 
-fig.savefig('output/spectrum_calibration.jpg')
+fig.savefig(output_path)

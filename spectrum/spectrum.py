@@ -3,13 +3,15 @@ import cv2  #pip install opencv-python
 import matplotlib.pyplot as plt
 import os
 
-folder_name = 'data/green'
-output_folder = 'output/11_12_green'
+folder_name = 'data/Canon'
+output_folder = 'output/Canon'
 os.makedirs(output_folder, exist_ok=True)
 
 img_names = [
-    '4_00002.JPG'
+    '1_modified.JPG'
 ]
+
+img_path = 'data/Canon/1_modified.JPG'
 
 def sum_up_col(grid):
     num_cols = grid.shape[1]
@@ -26,6 +28,18 @@ def get_spectrual_line(img_path):
     x_vals = np.arange(len(sum))
 
     return sum, x_vals
+
+sum, x = get_spectrual_line(img_path)
+
+# plt.scatter(x, sum, label='Spectral Line', s=2)
+# # plt.plot(x, sum, label='Spectral Line')
+# # plt.plot(peaks, sum[peaks], "rx", label='Peaks')
+# plt.xlabel('pixel number')
+# plt.ylabel('Spectrual intensity (a.u.)')
+
+# plt.grid()
+# plt.legend()
+# plt.show()
 
 # img_path = 'data/11_11_FWHM_cali/0.5rota_00005.JPG'
 # sum, x_vals = get_spectrual_line(img_path)
