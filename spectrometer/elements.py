@@ -2,8 +2,10 @@
 
 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from spectrometer.physics import reflect, grating_equation
-from spectrometer.utils import norm
+from spectrometer.utils import norm, wavelength_to_color
 import inspect
 
 class OpticalElement():
@@ -491,6 +493,8 @@ class OutputPlane(PlanarSurfaceBase):
 
     def __init__(self, pos, normal):
         super().__init__(pos=pos, normal=normal, aperture=float('inf'), n_1=None, n_2=None)
+        self.aggregated_intercepts = []
+        self.wavelengths = []
 
     def propagate_ray(self, ray):
         """
@@ -500,5 +504,77 @@ class OutputPlane(PlanarSurfaceBase):
             ray (Ray): the ray object, consisting of its position and direction.
         """
         intercept = self.intercept(ray)
+
         if intercept is not None:
             ray.append(intercept, ray.direc())
+            self.aggregated_intercepts.append(intercept)
+            self.wavelengths.append(ray.wavelength())
+
+    def scatter_plot(self):
+        # intercepts = np.array(self.intercepts)
+
+        # fig = plt.figure(figsize=(8, 6))
+        # plt.scatter(intercepts[:, 1], intercepts[:, 2],
+        #                       c=[wavelength_to_color(wl * 1e9) for wl in self.wavelengths], marker='o')
+
+        # plt.title("Intercepts on the Output Plane")
+        # plt.xlabel("Y-axis (m)")
+        # plt.ylabel("Z-axis (m)")
+        
+        # plt.grid(True)
+
+        # return fig
+        intercepts = np.array(self.aggregated_intercepts)
+
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(111)
+        # Scatter plot of intercepts with wavelength as color
+        scatter = ax.scatter(intercepts[:, 1], intercepts[:, 2],
+                             c=[wavelength_to_color(wl * 1e9) for wl in self.wavelengths], marker='o', s=6)
+        
+        # Customizing the plot
+        ax.set_title("Intercepts on the Output Plane")
+        ax.set_xlabel("Y-axis (m)")
+        ax.set_ylabel("Z-axis (m)")
+
+        # Adding the color legend manually
+        handles = []
+        labels = []
+        unique_wavelengths = sorted(set(self.wavelengths))  # Ensure unique wavelengths
+        for wl in unique_wavelengths:
+            color = wavelength_to_color(wl * 1e9)  # Convert wavelength to color
+            handles.append(Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10))
+            labels.append(f'{wl*1e9:.0f} nm')
+
+        ax.legend(handles=handles, labels=labels)
+        
+        # Enabling grid
+        ax.grid(True)
+
+        # Return the figure object
+        return fig
+    
+    def scatter_spacing(self, num_points_per_row):
+        intercepts = np.array(self.aggregated_intercepts)
+
+        if intercepts.size == 0:
+            print("Error: No intercepts found.")
+            return None, None  # Or handle this case as needed
+
+        if len(intercepts) % num_points_per_row != 0:
+            print(f"Warning: Number of intercepts ({len(intercepts)}) is not divisible by num_points_per_row ({num_points_per_row}).")
+            return None, None
+
+        num_rows = len(intercepts) // num_points_per_row
+        intercepts_reshaped = intercepts.reshape((num_rows, num_points_per_row, -1))
+        print(intercepts_reshaped)
+        x_coords = intercepts_reshaped[:, :, 0]
+        y_coords = intercepts_reshaped[:, :, 1]
+        z_coords = intercepts_reshaped[:, :, 2]
+    
+        avg_y_differences = np.mean(np.abs(np.sqrt(np.diff(np.mean(y_coords, axis=1))**2+np.diff(np.mean(x_coords, axis=1))**2)))
+
+        z_differences_per_row = [np.mean(np.abs(np.diff(np.sort(row)))) for row in z_coords]
+        avg_z_differences = np.mean(z_differences_per_row)
+        
+        return avg_y_differences, avg_z_differences

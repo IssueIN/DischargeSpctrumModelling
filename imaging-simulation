@@ -1,0 +1,276 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from spectrometer.elements import PlanarReflection, PlanarDiffractionGrating, OutputPlane, SphericalReflection, SphericalDiffractionGrating
+from spectrometer.rays import Ray, RayBundle
+from spectrometer.spectrometer import Spectrometer
+from spectrometer.utils import wavelength_to_color
+from matplotlib.ticker import ScalarFormatter
+
+mirror1_angle = 33 * np.pi / 180
+mirror2_angle = 36 * np.pi / 180
+grating_angle = 17 * np.pi / 180
+mirror1 = PlanarReflection(pos=[0.23,0,0], normal=[np.sin(mirror1_angle), np.cos(mirror2_angle), 0], aperture=1)
+diff_grat = SphericalDiffractionGrating(pos=[0.17 - np.sin(grating_angle) * 0.37, 0.20 - np.cos(grating_angle) * 0.37, 0], direc=[-np.sin(grating_angle), -np.cos(grating_angle), 0], curvature = - 2.7, aperture=0.1, rho_groove=1000)
+# diff_grat = PlanarDiffractionGrating(pos=[0.17, 0.15, 0], normal=[-np.sin(grating_angle), -np.cos(grating_angle), 0], aperture=0.1, rho_groove=1000)
+mirror2 = PlanarReflection(pos=[0.12, 0, 0], normal=[-np.sin(mirror2_angle), np.cos(mirror2_angle), 0], aperture=1)
+opp = OutputPlane(pos=[0, 0, 0], normal=[1, 0, 0])
+
+order = 1
+
+spectrometer_test = Spectrometer(mirror1, diff_grat, mirror2, opp)
+
+z_positions = np.linspace(-0.009, 0.009, 5)
+y_positions = np.linspace(-0.0002, 0.0002, 5)
+wavelengths = [400e-9, 480e-9, 500e-9, 520e-9, 580e-9, 600e-9, 700e-9]
+
+ray_direc = Ray(pos=[0.35, y_positions[2], z_positions[2]], direc=[-1, 0, 0], wavelength=600e-9)
+mirror1.propagate_ray(ray_direc)
+
+diff_grat.propagate_ray(ray_direc, m=order)
+direc_before = ray_direc.direc()
+pos_before = ray_direc.pos()
+
+mirror2.propagate_ray(ray_direc)
+direc_after = ray_direc.direc()
+pos_after = ray_direc.pos()
+
+rays = []
+
+# opp_test = OutputPlane(pos = [0, 0, 0], normal = [0,1,0])
+
+
+# for y_pos in y_positions:
+#     for z_pos in z_positions:
+#         for wl in wavelengths:
+#             ray = Ray(pos=[0.35, y_pos, z_pos], direc=[-1, 0, 0], wavelength=wl)
+#             # spectrometer_test.propagate_ray(ray, m=order)
+#             mirror1.propagate_ray(ray)
+#             diff_grat.propagate_ray(ray, m=order)
+#             mirror2.propagate_ray(ray)
+#             for opp_x in opp_xs:
+#                 opp_test = OutputPlane(pos=[opp_x,0,0], normal=[1,0,0])
+#             opp.propagate_ray(ray)
+#             # opp_test.propagate_ray(ray)
+#             # diff_grat.propagate_ray(ray)
+#             # mirror1.propagate_ray(ray)
+#             # opp.propagate_ray(ray)
+#             rays.append(ray)
+
+opp_xs_before = np.linspace(0, np.linalg.norm(pos_after - pos_before) - 0.01, 11)
+opp_xs_after = np.linspace(0, np.linalg.norm(pos_after - pos_before) - 0.01, 11)
+num_reduced = 1
+opp_xs_after = opp_xs_after[:-num_reduced]
+
+opp_test_before = []
+opp_test_after = []
+for opp_x in opp_xs_before:
+    new_pos = [pos_before[0] + opp_x * direc_before[0],  # Adjust X
+               pos_before[1] + opp_x * direc_before[1],  # Adjust Y
+               pos_before[2] + opp_x * direc_before[2]] 
+    opp_test_before.append(OutputPlane(pos=new_pos, normal=direc_before))
+
+for opp_x in opp_xs_after:
+    new_pos = [pos_after[0] + opp_x * direc_after[0],  # Adjust X
+               pos_after[1] + opp_x * direc_after[1],  # Adjust Y
+               pos_after[2] + opp_x * direc_after[2]]
+    opp_test_after.append(OutputPlane(pos=new_pos, normal=direc_after))
+
+for y_pos in y_positions:
+    for z_pos in z_positions:
+        ray = Ray(pos=[0.35, y_pos, z_pos], direc=[-1, 0, 0], wavelength=600e-9)
+        mirror1.propagate_ray(ray)
+        diff_grat.propagate_ray(ray, m=order)
+        for opp in opp_test_before:
+            opp.propagate_ray(ray)
+        mirror2.propagate_ray(ray)
+        for opp in opp_test_after:
+            opp.propagate_ray(ray)
+        # opp.propagate_ray(ray)
+        rays.append(ray)
+
+z_diff_sum = []
+y_diff_sum = []
+
+for opp in opp_test_before:
+    y_diff, z_diff = opp.scatter_spacing(num_points_per_row=5)
+    z_diff_sum.append(z_diff)
+    y_diff_sum.append(y_diff)
+for opp in opp_test_after:
+    y_diff, z_diff = opp.scatter_spacing(num_points_per_row=5)
+    z_diff_sum.append(z_diff)
+    y_diff_sum.append(y_diff)
+
+opp_xs_combined = np.linspace(np.min(opp_xs_before), 2 * np.max(opp_xs_after), 22-num_reduced)
+fig, axes = plt.subplots(2, 1, figsize=(12, 5), sharex=True)  # Share x and y scales
+
+# First scatter plot
+axes[0].scatter(opp_xs_combined, z_diff_sum, color='black')
+axes[0].set_ylabel("Vertical Diff")
+axes[0].yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+axes[0].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+axes[0].grid(True)
+
+# Second scatter plot
+axes[1].scatter(opp_xs_combined, y_diff_sum, color='black')
+axes[1].yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+axes[1].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+axes[1].set_xlabel("Path")
+axes[1].set_ylabel("Horizontal Diff")
+axes[1].grid(True)
+
+# Adjust layout for better spacing
+plt.tight_layout()
+plt.show()
+
+fig = plt.figure(figsize=(12, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+# Plot rays and their paths
+for ray in rays:
+    vertices = np.array(ray.vertices())
+    color = wavelength_to_color(ray.wavelength() * 1e9)  # Convert wavelength to nm and get color
+    ax.plot(vertices[:, 0], vertices[:, 1], vertices[:, 2], marker='o', linestyle='-', color=color,
+            label=f'{ray.wavelength() * 1e9:.0f} nm', ms=2)
+
+# Customizing the plot
+ax.set_xlim(-0.1, 0.4)  # Adjust limits as necessary based on your spectrometer dimensions
+ax.set_ylim(-0.1, 0.3)
+ax.set_zlim(-0.1, 0.1)
+ax.set_xlabel("X-axis")
+ax.set_ylabel("Y-axis")
+ax.set_zlabel("Z-axis")
+ax.set_title(f"3D Ray Paths Through the Spectrometer, m={order}")
+
+# Remove duplicate legends
+handles, labels = ax.get_legend_handles_labels()
+unique_labels = dict(zip(labels, handles))
+ax.legend(unique_labels.values(), unique_labels.keys(), loc='upper right')
+
+plt.show()
+
+fig = opp.scatter_plot()
+plt.show()
+
+# mirror1_angle = 33 * np.pi / 180
+# mirror2_angle = 36 * np.pi / 180
+# grating_angle = 0 * np.pi / 180
+# mirror1 = PlanarReflection(pos=[0.23,0,0], normal=[np.sin(mirror1_angle), np.cos(mirror2_angle), 0], aperture=1)
+# diff_grat = SphericalDiffractionGrating(pos=[0.17 - np.sin(grating_angle) * 0.37, 0.20 - np.cos(grating_angle) * 0.37, 0], direc=[-np.sin(grating_angle), -np.cos(grating_angle), 0], curvature = - 2.7, aperture=0.1, rho_groove=1000)
+# # diff_grat = PlanarDiffractionGrating(pos=[0.17, 0.15, 0], normal=[-np.sin(grating_angle), -np.cos(grating_angle), 0], aperture=0.1, rho_groove=1000)
+# mirror2 = PlanarReflection(pos=[0.12, 0, 0], normal=[-np.sin(mirror2_angle), np.cos(mirror2_angle), 0], aperture=1)
+# opp = OutputPlane(pos=[0, 0, 0], normal=[1, 0, 0])
+
+# order = 0
+
+# spectrometer_test = Spectrometer(mirror1, diff_grat, mirror2, opp)
+
+# z_positions = np.linspace(-0.009, 0.009, 5)
+# y_positions = np.linspace(-0.0002, 0.0002, 5)
+# wavelengths = [400e-9, 480e-9, 500e-9, 520e-9, 580e-9, 600e-9, 700e-9]
+
+# # ray_direc = Ray(pos=[0.35, y_positions[2], z_positions[2]], direc=[-1, 0, 0], wavelength=600e-9)
+# # mirror1.propagate_ray(ray_direc)
+
+# # diff_grat.propagate_ray(ray_direc, m=order)
+# # direc_before = ray_direc.direc()
+# # pos_before = ray_direc.pos()
+
+# # mirror2.propagate_ray(ray_direc)
+# # direc_after = ray_direc.direc()
+# # pos_after = ray_direc.pos()
+
+# rays = []
+
+# # opp_test = OutputPlane(pos = [0, 0, 0], normal = [0,1,0])
+
+
+# for y_pos in y_positions:
+#     for z_pos in z_positions:
+#         for wl in wavelengths:
+#             ray = Ray(pos=[0.35, y_pos, z_pos], direc=[-1, 0, 0], wavelength=wl)
+#             # spectrometer_test.propagate_ray(ray, m=order)
+#             mirror1.propagate_ray(ray)
+#             diff_grat.propagate_ray(ray, m=order)
+#             mirror2.propagate_ray(ray)
+#             opp.propagate_ray(ray)
+#             # opp_test.propagate_ray(ray)
+#             # diff_grat.propagate_ray(ray)
+#             # mirror1.propagate_ray(ray)
+#             # opp.propagate_ray(ray)
+#             rays.append(ray)
+
+# # opp_xs_before = np.linspace(0.01, np.linalg.norm(pos_after - pos_before) - 0.01, 11)
+# # opp_xs_after = np.linspace(0.01, np.linalg.norm(pos_after - pos_before) - 0.01, 11)
+
+# # opp_test_before = []
+# # opp_test_after = []
+# # for opp_x in opp_xs_before:
+# #     new_pos = [pos_before[0] + opp_x * direc_before[0],  # Adjust X
+# #                pos_before[1] + opp_x * direc_before[1],  # Adjust Y
+# #                pos_before[2] + opp_x * direc_before[2]] 
+# #     opp_test_before.append(OutputPlane(pos=new_pos, normal=direc_before))
+
+# # for opp_x in opp_xs_after:
+# #     new_pos = [pos_after[0] + opp_x * direc_after[0],  # Adjust X
+# #                pos_after[1] + opp_x * direc_after[1],  # Adjust Y
+# #                pos_after[2] + opp_x * direc_after[2]]
+# #     opp_test_after.append(OutputPlane(pos=new_pos, normal=direc_after))
+
+# # for y_pos in y_positions:
+# #     for z_pos in z_positions:
+# #         ray = Ray(pos=[0.35, y_pos, z_pos], direc=[-1, 0, 0], wavelength=600e-9)
+# #         mirror1.propagate_ray(ray)
+# #         diff_grat.propagate_ray(ray, m=order)
+# #         for opp in opp_test_before:
+# #             opp.propagate_ray(ray)
+# #         mirror2.propagate_ray(ray)
+# #         for opp in opp_test_after:
+# #             opp.propagate_ray(ray)
+# #         # opp.propagate_ray(ray)
+# #         rays.append(ray)
+
+# # z_diff_sum = []
+# # y_diff_sum = []
+
+# # for opp in opp_test_before:
+# #     y_diff, z_diff = opp.scatter_spacing(num_points_per_row=5)
+# #     z_diff_sum.append(z_diff)
+# #     y_diff_sum.append(y_diff)
+# # for opp in opp_test_after:
+# #     y_diff, z_diff = opp.scatter_spacing(num_points_per_row=5)
+# #     z_diff_sum.append(z_diff)
+# #     y_diff_sum.append(y_diff)
+
+# # opp_xs_combined = np.linspace(np.min(opp_xs_before), 2 * np.max(opp_xs_after), 22)
+# # plt.scatter(opp_xs_combined, z_diff_sum)
+# # plt.scatter(opp_xs_combined, y_diff_sum)
+# # plt.show()
+
+# fig = plt.figure(figsize=(12, 8))
+# ax = fig.add_subplot(111, projection='3d')
+
+# # Plot rays and their paths
+# for ray in rays:
+#     vertices = np.array(ray.vertices())
+#     color = wavelength_to_color(ray.wavelength() * 1e9)  # Convert wavelength to nm and get color
+#     ax.plot(vertices[:, 0], vertices[:, 1], vertices[:, 2], marker='o', linestyle='-', color=color,
+#             label=f'{ray.wavelength() * 1e9:.0f} nm', ms=2)
+
+# # Customizing the plot
+# ax.set_xlim(-0.1, 0.4)  # Adjust limits as necessary based on your spectrometer dimensions
+# ax.set_ylim(-0.1, 0.3)
+# ax.set_zlim(-0.1, 0.1)
+# ax.set_xlabel("X-axis (m)")
+# ax.set_ylabel("Y-axis (m)")
+# ax.set_zlabel("Z-axis (m)")
+# ax.set_title(f"3D Ray Paths Through the Spectrometer, m={order}")
+
+# # Remove duplicate legends
+# handles, labels = ax.get_legend_handles_labels()
+# unique_labels = dict(zip(labels, handles))
+# ax.legend(unique_labels.values(), unique_labels.keys(), loc='upper right')
+
+# plt.show()
+
+# fig = opp.scatter_plot()
+# plt.show()
